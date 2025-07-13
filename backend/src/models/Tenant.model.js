@@ -1,24 +1,24 @@
-import mongoose,{Schema} from "mongoose";
+import mongoose, { Schema } from "mongoose";
 
-const tenantSchema= new Schema({
-    name:{
+const tenantSchema = new Schema({
+    name: {
         type: String,
         required: true,
         unique: true,
         trim: true,
     },
-    slug:{
+    slug: {
         type: String,
         required: true,
         unique: true,
         lowercase: true,
     },
-    createdBy:{
+    createdBy: {
         type: Schema.Types.ObjectId,
         ref: "User",
         required: false, // Admin User who created the tenant
     }
-},{timestamps: true});
+}, { timestamps: true });
 
 
-export const Tenant =mongoose.model("Tenant", tenantSchema);
+export const Tenant = mongoose.model("Tenant", tenantSchema);

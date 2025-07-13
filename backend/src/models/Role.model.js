@@ -1,4 +1,4 @@
-import mongoose,{Schema} from "mongoose";
+import mongoose, { Schema } from "mongoose";
 
 const roleSchema = new mongoose.Schema({
     name: {
@@ -15,4 +15,4 @@ const roleSchema = new mongoose.Schema({
     timestamps: true,
 });
 
-export const Role= mongoose.model("Role", roleSchema);
+export const Role = mongoose.model("Role", roleSchema);
