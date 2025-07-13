@@ -11,22 +11,22 @@ const createTenant =asyncHandler(async(req,res)=>{
     }
 
     const tenantExist = await Tenant.findOne({
-        $or: [{name},{slug:slug.tolowerCase()}],
+        $or: [{name},{slug:slug.toLowerCase()}],
     });
 
-    if(!tenantExist){
+    if(tenantExist){
         throw new ApiError(400,"Tenant with this name or slug already exists");
     }
 
     const tenant = await Tenant.create({
         name,
-        slug: slug.tolowerCase(),
+        slug: slug.toLowerCase(),
         createdBy: req.user?._id || null,
     })
 
     return res
         .status(201)
-        .json(new ApiResponse(200, tenant, "Tenant created successfully"))
+        .json(new ApiResponse(201, tenant, "Tenant created successfully"))
 })
 
 const getAllTenants =asyncHandler(async(req,res)=>{
@@ -40,7 +40,7 @@ const getAllTenants =asyncHandler(async(req,res)=>{
 const getTenantBySlug = asyncHandler(async(req,res)=>{
     const {slug} =req.params;
 
-    const tenant =await Tenant.findOneI({slug:slug.tolowerCase()});
+    const tenant =await Tenant.findOne({slug:slug.toLowerCase()});
 
     if(!tenant){
         throw new ApiError(404, "Tenant not found");
@@ -53,7 +53,7 @@ const getTenantBySlug = asyncHandler(async(req,res)=>{
 })
 
 
-export {
+export default {
     createTenant,
     getAllTenants,
     getTenantBySlug
