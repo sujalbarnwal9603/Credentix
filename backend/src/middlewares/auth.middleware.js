@@ -10,7 +10,7 @@ export const verifyJWT = asyncHandler(async (req, res, next) => {
         if (!token) {
             throw new ApiError(401, "Unauthorized Request");
         }
-        const decodedToken = jwt.verify(token, ProcessingInstruction.env.ACCESS_TOKEN_SECRET);
+        const decodedToken = jwt.verify(token, process.env.ACCESS_TOKEN_SECRET);
         if (!decodedToken) {
             throw new ApiError(401, "Unauthorized Request");
         }
