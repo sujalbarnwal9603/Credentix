@@ -17,7 +17,14 @@ const userSchema = new mongoose.Schema({
     },
     password: {
         type: String,
-        required: true,
+        required: function(){
+            return this.provider!=="google"; // Password is required only if the provider is not Google
+        },
+    },
+    provider:{
+        type:String,
+        default:"local",
+        enum:["local","google"]
     },
     tenant: {
         type: Schema.Types.ObjectId,
