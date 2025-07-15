@@ -1,5 +1,5 @@
 import asyncHandler from "../utils/asyncHandler.js";
-import { Tenant } from "../models/tenant.model.js";
+import { Tenant } from "../models/Tenant.model.js";
 import ApiError from "../utils/ApiError.js";
 import ApiResponse from "../utils/ApiResponse.js";
 

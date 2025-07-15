@@ -1,5 +1,5 @@
 import asyncHandler from "../utils/asyncHandler.js";
-import { Role } from "../models/role.model.js";
+import {Role} from "../models/Role.model.js"
 import ApiError from "../utils/ApiError.js";
 import ApiResponse from "../utils/ApiResponse.js";
 

@@ -5,11 +5,11 @@ import {verifyJWT} from "../middlewares/auth.middleware.js";
 
 const router=Router();
 
-router.post("/register",authController.register)
+router.post("/register",authController.registerUser)
 
-router.post("/login", authController.login);
+router.post("/login", authController.loginUser);
 
-router.post("/logout",verifyJWT ,authController.logout);
+router.post("/logout",verifyJWT ,authController.logoutUser);
 
 router.post("/refresh", authController.refreshAccessToken)
 
