@@ -12,6 +12,7 @@ const generateAccessAndRefreshToken = async (userId) => {
         const user = await User.findById(userId);
         const accessToken = user.generateAccessToken();
         const refreshToken = user.generateRefreshToken();
+
         user.refreshToken = refreshToken;
         await user.save({ validateBeforeSave: false });
         return { accessToken, refreshToken };
@@ -21,6 +22,13 @@ const generateAccessAndRefreshToken = async (userId) => {
 }
 
 const registerUser = asyncHandler(async (req, res) => {
+    console.log("req.body:", req.body); // Add this line
+    console.log("METHOD:", req.method);
+    console.log("PATH:", req.originalUrl);
+    console.log("BODY:", req.body); // ✅ This will confirm if req.body is parsed
+
+
+    console.log(req.body);
     const { fullName, email, password, tenantSlug, roleName } = req.body;
 
     if ([fullName, email, password].some((field) => (field.trim() === ""))) {

@@ -8,6 +8,16 @@ import helmet from 'helmet';
 
 const app=express();
 
+app.use((req, res, next) => {
+  console.log("METHOD:", req.method);
+  console.log("PATH:", req.path);
+  console.log("BODY:", req.body);
+  next();
+});
+
+
+
+
 
 app.use(helmet());
 
@@ -23,10 +33,10 @@ app.use(cors({
 
 
 app.use(express.json());
-app.use(cookieParser());
+
 app.use(express.urlencoded({ extended: true }));
 
-
+app.use(cookieParser());
 
 app.get('/', (req,res)=>{
     res.send("Your API is Live 🔥\n Welcome to Credentix Backend");
