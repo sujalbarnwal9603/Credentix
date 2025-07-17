@@ -1,43 +1,47 @@
-import { Router } from "express";
+import express from "express";
 import passport from "passport";
+import jwt from "jsonwebtoken";
+import { User } from "../models/User.model.js";
 
-const router = Router();
+const router = express.Router();
 
-// Step 1: Redirect to Google for authentication
-
+// 1. Initiate Google login
 router.get(
-    "/google",
-    passport.authenticate("google", {
-        scope: ["profile", "email"],
-        session: false // Disable session for stateless authentication
-    })
+  "/google",
+  passport.authenticate("google", {
+    scope: ["profile", "email"],
+  })
 );
 
-
-// Step 2: Google OAuth callback
+// 2. Google callback
 router.get(
   "/google/callback",
   passport.authenticate("google", {
     failureRedirect: "/login",
-    session: false, // Disable session for stateless authentication
+    session: false,
   }),
   async (req, res) => {
-    try {
-      const user = req.user
-      const accessToken = user.generateAccessToken()
-      const refreshToken = user.generateRefreshToken()
+    const user = req.user;
 
-      // Optional: Save the refresh token in the user document
-      user.refreshToken = refreshToken
-      await user.save({ validateBeforeSave: false })
+    const accessToken = user.generateAccessToken();
+    const refreshToken = user.generateRefreshToken();
 
-      // ✅ Redirect to frontend with tokens
-      res.redirect(`http://localhost:3000/oauth-success?accessToken=${accessToken}&refreshToken=${refreshToken}`)
-    } catch (error) {
-      console.error("OAuth callback error:", error)
-      res.redirect("/login")
-    }
-  },
-)
+    user.refreshToken = refreshToken;
+    await user.save({ validateBeforeSave: false });
+
+    res.status(200).json({
+      success: true,
+      message: "Google login successful",
+      accessToken,
+      refreshToken,
+      user: {
+        fullName: user.fullName,
+        email: user.email,
+        tenant: user.tenant,
+        role: user.role,
+      },
+    });
+  }
+);
 
 export default router;

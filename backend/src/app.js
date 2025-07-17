@@ -47,13 +47,17 @@ import userRoutes from './routes/user.routes.js';
 import authRoutes from './routes/auth.routes.js';
 import roleRoutes from './routes/role.routes.js';
 import tenantRoutes from './routes/tenant.routes.js';
-import googleRoutes from './routes/google.routes.js'
+
+
+import googleRoutes from './routes/google.routes.js';
+
+app.use("/api/v1/oauth", googleRoutes);
+
 
 app.use('/api/v1/users', userRoutes);
 app.use('/api/v1/auth', authRoutes);
 app.use('/api/v1/roles', roleRoutes);
 app.use('/api/v1/tenants', tenantRoutes);
-app.use("/api/v1/oauth", googleRoutes);
 
 
 // ========== 404 Handler ==========
