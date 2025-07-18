@@ -17,8 +17,6 @@ app.use((req, res, next) => {
 
 
 
-
-
 app.use(helmet());
 
 
@@ -47,13 +45,12 @@ import userRoutes from './routes/user.routes.js';
 import authRoutes from './routes/auth.routes.js';
 import roleRoutes from './routes/role.routes.js';
 import tenantRoutes from './routes/tenant.routes.js';
-
-
 import googleRoutes from './routes/google.routes.js';
+import oauthRoutes from "./routes/oauth.routes.js";
+
 
 app.use("/api/v1/oauth", googleRoutes);
-
-
+app.use("/api/v1/oauth2", oauthRoutes);
 app.use('/api/v1/users', userRoutes);
 app.use('/api/v1/auth', authRoutes);
 app.use('/api/v1/roles', roleRoutes);
