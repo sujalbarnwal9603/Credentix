@@ -47,9 +47,10 @@ import roleRoutes from './routes/role.routes.js';
 import tenantRoutes from './routes/tenant.routes.js';
 import googleRoutes from './routes/google.routes.js';
 import oauthRoutes from "./routes/oauth.routes.js";
-
+import clientRoutes from "./routes/client.routes.js"
 
 app.use("/api/v1/oauth", googleRoutes);
+app.use("/api/v1/oauth2", clientRoutes) // Mount OAuth2 client registration route
 app.use("/api/v1/oauth2", oauthRoutes);
 app.use('/api/v1/users', userRoutes);
 app.use('/api/v1/auth', authRoutes);
