@@ -21,7 +21,7 @@ const clientSchema=new Schema({
         type:[String], // List of allowed redirect URIs
         required: true, 
     },
-    createdBY:{
+    createdBy:{
         type:Schema.Types.ObjectId,
         ref:"User",
         required:true,
