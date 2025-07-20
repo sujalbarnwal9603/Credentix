@@ -3,6 +3,7 @@ import ApiError from "../utils/ApiError.js";
 import { User } from "../models/User.model.js";
 import jwt from 'jsonwebtoken';
 import ApiResponse from "../utils/ApiResponse.js";
+import { Client} from "../models/Client.model.js"
 
 // In- memory store (use Redis in production)
 const authCodeStore = new Map();
@@ -25,6 +26,18 @@ const handleAuthorize= asyncHandler(async(req,res)=>{
         throw new ApiError(400, "unsupported response_type");
     }
 
+    // Validate client_id and redirect_uri
+    const client=await Client.findOne({client_id});
+
+    if(!client){
+        throw new ApiError(400, "Invalid client_id");
+    }
+
+    if(!client.redirect_uris.includes(redirect_uri)){
+        throw new ApiError(400, "Invalid redirect_uri");
+    }
+
+    // ✅ Generate and store temporary auth code
     const code = Math.random().toString(36).substring(2,15);
     authCodeStore.set(code,{
         userId: req.user.id,
@@ -32,6 +45,8 @@ const handleAuthorize= asyncHandler(async(req,res)=>{
         scope,
     });
 
+
+    // ✅ Redirect to client with code
     const redirectUrl= new URL(redirect_uri);
     redirectUrl.searchParams.set("code", code);
     if(state) redirectUrl.searchParams.set("state", state);
@@ -51,7 +66,26 @@ const handleToken = asyncHandler(async(req,res)=>{
     if(!code || !client_id || !client_secret || !redirecct_uri || !grant_type){
         throw new ApiError(400, "Only 'authorization_code' grant type is supported");
     }
+    
+    if(grant_type!=="authorization_code"){
+        throw new ApiError(400, "Only 'authorization_code' grant_type supported");
+    }
 
+    // ✅ Validate client_id and secret
+    const client=await Client.findOne({client_id});
+    if(!client){
+        throw new ApiError(400, "Invalid client_id");
+    }
+
+    if(client.client_secret!==client_secret){
+        throw new ApiError(400, "Invalid client_secret");
+    }
+
+    if(!client.redirect_uris.includes(redirecct_uri)){
+        throw new ApiError(400, "Invalid redirect_uri");
+    }
+
+    // ✅ Validate and consume auth code
     const authData = authCodeStore.get(code);
 
     if(!authData || authData.client_id !== client_id){
@@ -65,6 +99,8 @@ const handleToken = asyncHandler(async(req,res)=>{
 
     const accessToken= user.generateAccessToken();
     const refreshToken = user.generateRefreshToken();
+
+    // ✅ Consume the code (one-time use)
     authCodeStore.delete(code);
 
     return res
