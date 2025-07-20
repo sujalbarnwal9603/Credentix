@@ -48,10 +48,12 @@ import tenantRoutes from './routes/tenant.routes.js';
 import googleRoutes from './routes/google.routes.js';
 import oauthRoutes from "./routes/oauth.routes.js";
 import clientRoutes from "./routes/client.routes.js"
+import openidRoutes from "./routes/openid.routes.js"
 
 app.use("/api/v1/oauth", googleRoutes);
 app.use("/api/v1/oauth2", clientRoutes) // Mount OAuth2 client registration route
 app.use("/api/v1/oauth2", oauthRoutes);
+app.use("/",openidRoutes);
 app.use('/api/v1/users', userRoutes);
 app.use('/api/v1/auth', authRoutes);
 app.use('/api/v1/roles', roleRoutes);
