@@ -5,7 +5,7 @@ import jwt from 'jsonwebtoken';
 import ApiResponse from "../utils/ApiResponse.js";
 import { Client } from "../models/Client.model.js"
 import { signIdToken } from "../utils/signIdToken.js";
-
+import redis from "../utils/redis.client.js";
 
 // In- memory store (use Redis in production)
 const authCodeStore = new Map();
@@ -39,13 +39,20 @@ const handleAuthorize = asyncHandler(async (req, res) => {
         throw new ApiError(400, "Invalid redirect_uri");
     }
 
-    // ✅ Generate and store temporary auth code
+    // ✅ Generate and store temporary auth code in Redis
     const code = Math.random().toString(36).substring(2, 15);
-    authCodeStore.set(code, {
-        userId: req.user.id,
-        client_id,
-        scope,
-    });
+
+    await redis.set(
+        `auth_code:${code}`,
+        JSON.stringify({
+            userId: req.user.id,
+            client_id,
+            scope,
+        }),
+        "EX",
+        300 // expires in 5 minutes
+    );
+
 
 
     // ✅ Redirect to client with code
@@ -87,8 +94,15 @@ const handleToken = asyncHandler(async (req, res) => {
         throw new ApiError(400, "Invalid redirect_uri");
     }
 
-    // ✅ Validate and consume auth code
-    const authData = authCodeStore.get(code);
+    const rawData = await redis.get(`auth_code:${code}`);
+    if (!rawData) {
+        throw new ApiError(400, "Invalid or expired code");
+    }
+    const authData = JSON.parse(rawData);
+
+    // One-time use: delete it
+    await redis.del(`auth_code:${code}`);
+
 
     if (!authData || authData.client_id !== client_id) {
         throw new ApiError(400, "Invalid or expired code");
