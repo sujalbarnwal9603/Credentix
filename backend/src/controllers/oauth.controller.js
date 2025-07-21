@@ -3,7 +3,9 @@ import ApiError from "../utils/ApiError.js";
 import { User } from "../models/User.model.js";
 import jwt from 'jsonwebtoken';
 import ApiResponse from "../utils/ApiResponse.js";
-import { Client} from "../models/Client.model.js"
+import { Client } from "../models/Client.model.js"
+import { signIdToken } from "../utils/signIdToken.js";
+
 
 // In- memory store (use Redis in production)
 const authCodeStore = new Map();
@@ -15,31 +17,31 @@ const authCodeStore = new Map();
  */
 
 
-const handleAuthorize= asyncHandler(async(req,res)=>{
-    const {response_type, client_id, redirect_uri, scope, state} = req.query;
+const handleAuthorize = asyncHandler(async (req, res) => {
+    const { response_type, client_id, redirect_uri, scope, state } = req.query;
 
-    if(!response_type || !client_id || !redirect_uri){
+    if (!response_type || !client_id || !redirect_uri) {
         throw new ApiError(400, "Missing required OAuth2 parameters");
     }
 
-    if(response_type!=="code"){
+    if (response_type !== "code") {
         throw new ApiError(400, "unsupported response_type");
     }
 
     // Validate client_id and redirect_uri
-    const client=await Client.findOne({client_id});
+    const client = await Client.findOne({ client_id });
 
-    if(!client){
+    if (!client) {
         throw new ApiError(400, "Invalid client_id");
     }
 
-    if(!client.redirect_uris.includes(redirect_uri)){
+    if (!client.redirect_uris.includes(redirect_uri)) {
         throw new ApiError(400, "Invalid redirect_uri");
     }
 
     // ✅ Generate and store temporary auth code
-    const code = Math.random().toString(36).substring(2,15);
-    authCodeStore.set(code,{
+    const code = Math.random().toString(36).substring(2, 15);
+    authCodeStore.set(code, {
         userId: req.user.id,
         client_id,
         scope,
@@ -47,9 +49,9 @@ const handleAuthorize= asyncHandler(async(req,res)=>{
 
 
     // ✅ Redirect to client with code
-    const redirectUrl= new URL(redirect_uri);
+    const redirectUrl = new URL(redirect_uri);
     redirectUrl.searchParams.set("code", code);
-    if(state) redirectUrl.searchParams.set("state", state);
+    if (state) redirectUrl.searchParams.set("state", state);
 
     return res.status(302).redirect(redirectUrl.toString());
 })
@@ -60,57 +62,61 @@ const handleAuthorize= asyncHandler(async(req,res)=>{
  * @access Public
  */
 
-const handleToken = asyncHandler(async(req,res)=>{
-    const {code, client_id, client_secret, redirecct_uri, grant_type}= req.body;
+const handleToken = asyncHandler(async (req, res) => {
+    const { code, client_id, client_secret, redirecct_uri, grant_type } = req.body;
 
-    if(!code || !client_id || !client_secret || !redirecct_uri || !grant_type){
+    if (!code || !client_id || !client_secret || !redirecct_uri || !grant_type) {
         throw new ApiError(400, "Only 'authorization_code' grant type is supported");
     }
-    
-    if(grant_type!=="authorization_code"){
+
+    if (grant_type !== "authorization_code") {
         throw new ApiError(400, "Only 'authorization_code' grant_type supported");
     }
 
     // ✅ Validate client_id and secret
-    const client=await Client.findOne({client_id});
-    if(!client){
+    const client = await Client.findOne({ client_id });
+    if (!client) {
         throw new ApiError(400, "Invalid client_id");
     }
 
-    if(client.client_secret!==client_secret){
+    if (client.client_secret !== client_secret) {
         throw new ApiError(400, "Invalid client_secret");
     }
 
-    if(!client.redirect_uris.includes(redirecct_uri)){
+    if (!client.redirect_uris.includes(redirecct_uri)) {
         throw new ApiError(400, "Invalid redirect_uri");
     }
 
     // ✅ Validate and consume auth code
     const authData = authCodeStore.get(code);
 
-    if(!authData || authData.client_id !== client_id){
+    if (!authData || authData.client_id !== client_id) {
         throw new ApiError(400, "Invalid or expired code");
     }
 
-    const user =await User.findById(authData.userId);
-    if(!user){
+    const user = await User.findById(authData.userId);
+    if (!user) {
         throw new ApiError(404, "User not found");
     }
 
-    const accessToken= user.generateAccessToken();
+    const accessToken = user.generateAccessToken();
     const refreshToken = user.generateRefreshToken();
 
     // ✅ Consume the code (one-time use)
     authCodeStore.delete(code);
 
+    const id_token = await signIdToken(user, client_id);
+
     return res
         .status(200)
-        .json(new ApiResponse(200,{
-            access_Token:accessToken,
-            refresh_Token: refreshToken,
+        .json(new ApiResponse(200, {
+            access_token: accessToken,
+            refresh_token: refreshToken,
+            id_token, // ✅ Add ID token
             token_type: "Bearer",
-            expires_in: 15*60,
+            expires_in: 15 * 60,
         }, "Tokens generated successfully"));
+
 
 })
 
@@ -120,24 +126,24 @@ const handleToken = asyncHandler(async(req,res)=>{
  * @access Public (with Bearer token)
  */
 
-const handleUserInfo = asyncHandler(async(req,res)=>{
+const handleUserInfo = asyncHandler(async (req, res) => {
     const token = req.headers.authorization?.split(" ")[1];
 
-    if(!token){
+    if (!token) {
         throw new ApiError(401, "Access token is required");
     }
 
-    const decoded= jwt.verify(token, process.env.ACCESS_TOKEN_SECRET);
+    const decoded = jwt.verify(token, process.env.ACCESS_TOKEN_SECRET);
 
-    const user=await User.findById(decoded._id).select("-password -refreshToken");
+    const user = await User.findById(decoded._id).select("-password -refreshToken");
 
-    if(!user){
+    if (!user) {
         throw new ApiError(404, "User not found");
     }
 
     return res
         .status(200)
-        .json(new ApiResponse(200,{
+        .json(new ApiResponse(200, {
             sub: user._id,
             email: user.email,
             fullName: user.fullName,
@@ -146,7 +152,7 @@ const handleUserInfo = asyncHandler(async(req,res)=>{
         }, "User info fetched successfully"));
 });
 
-export default{ 
+export default {
     handleAuthorize,
     handleToken,
     handleUserInfo
