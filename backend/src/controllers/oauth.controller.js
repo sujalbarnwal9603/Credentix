@@ -7,6 +7,13 @@ import { Client } from "../models/Client.model.js"
 import { signIdToken } from "../utils/signIdToken.js";
 import redis from "../utils/redis.client.js";
 
+import { generateAuthorizationCode } from "../utils/oauth2.utils.js";
+import { AuthorizationCode } from "../models/AuthorizationCode.model.js";
+import { Client } from "../models/Client.model.js";
+
+// ✅ Added Redis-based session store
+import redisClient from "../config/redis.js";
+
 // In- memory store (use Redis in production)
 const authCodeStore = new Map();
 
@@ -17,51 +24,74 @@ const authCodeStore = new Map();
  */
 
 
-const handleAuthorize = asyncHandler(async (req, res) => {
+/**
+ * @desc   Handles the /authorize endpoint of the OAuth2 flow
+ * @route  GET /oauth2/authorize
+ */
+const handleAuthorize = async (req, res) => {
+  try {
     const { response_type, client_id, redirect_uri, scope, state } = req.query;
 
+    // ✅ Validating required parameters
     if (!response_type || !client_id || !redirect_uri) {
-        throw new ApiError(400, "Missing required OAuth2 parameters");
+      return res.status(400).json({ error: "Missing required query parameters" });
     }
 
+    // ✅ Validating response_type
     if (response_type !== "code") {
-        throw new ApiError(400, "unsupported response_type");
+      return res.status(400).json({ error: "Unsupported response_type" });
     }
 
-    // Validate client_id and redirect_uri
+    // ✅ Fetch client from DB
     const client = await Client.findOne({ client_id });
 
     if (!client) {
-        throw new ApiError(400, "Invalid client_id");
+      return res.status(400).json({ error: "Invalid client_id" });
     }
 
     if (!client.redirect_uris.includes(redirect_uri)) {
-        throw new ApiError(400, "Invalid redirect_uri");
+      return res.status(400).json({ error: "Invalid redirect_uri" });
     }
 
-    // ✅ Generate and store temporary auth code in Redis
-    const code = Math.random().toString(36).substring(2, 15);
+    // ✅ User must be authenticated at this point
+    const user = req.user;
+    if (!user) {
+      // User not logged in
+      return res.status(401).json({ error: "User not authenticated" });
+    }
 
-    await redis.set(
-        `auth_code:${code}`,
-        JSON.stringify({
-            userId: req.user.id,
-            client_id,
-            scope,
-        }),
-        "EX",
-        300 // expires in 5 minutes
-    );
+    // ✅ Generate unique authorization code
+    const code = generateAuthorizationCode();
 
+    // ✅ Store the authorization code in DB (optional fallback) and Redis (fast)
+    await AuthorizationCode.create({
+      code,
+      client_id,
+      user_id: user._id,
+      redirect_uri,
+      scope,
+      expires_at: new Date(Date.now() + 5 * 60 * 1000), // 5 minutes
+    });
 
+    // ✅ Also store code in Redis with expiry (5 minutes)
+    await redisClient.setEx(`auth_code:${code}`, 300, JSON.stringify({
+      client_id,
+      user_id: user._id.toString(),
+      redirect_uri,
+      scope,
+    }));
 
-    // ✅ Redirect to client with code
+    // ✅ Redirect with the authorization code
     const redirectUrl = new URL(redirect_uri);
     redirectUrl.searchParams.set("code", code);
     if (state) redirectUrl.searchParams.set("state", state);
 
-    return res.status(302).redirect(redirectUrl.toString());
-})
+    return res.redirect(redirectUrl.toString());
+  } catch (error) {
+    console.error("❌ Error in handleAuthorize:", error);
+    return res.status(500).json({ error: "Server error" });
+  }
+};
 
 /**
  * @desc Exchange auth code for access & refresh tokens
