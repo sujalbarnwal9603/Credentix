@@ -50,8 +50,12 @@ import oauthRoutes from "./routes/oauth.routes.js";
 import clientRoutes from "./routes/client.routes.js"
 import openidRoutes from "./routes/openid.routes.js"
 import jwksRoutes from "./routes/jwks.routes.js"
+import protectedRoutes from "./routes/protected.routes.js";
 
 
+
+
+app.use("/api/protected", protectedRoutes);
 app.use("/api/v1/oauth", googleRoutes);
 app.use("/api/v1/oauth2", clientRoutes) // Mount OAuth2 client registration route
 app.use("/api/v1/oauth2", oauthRoutes);
