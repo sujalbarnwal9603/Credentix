@@ -25,4 +25,8 @@ router.post("/token", oauthController.handleToken);
 
 router.get("/userinfo", oauthController.handleUserInfo);
 
+
+router.post("/introspect", oauthController.handleIntrospect);
+
+
 export default router;

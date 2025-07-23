@@ -196,8 +196,44 @@ const handleUserInfo = asyncHandler(async (req, res) => {
         }, "User info fetched successfully"));
 });
 
+/**
+ * @desc   Token Introspection (RFC 7662)
+ * @route  POST /oauth2/introspect
+ * @access Public (used by resource servers)
+ */
+
+const handleIntrospect =asyncHandler(async(req,res)=>{
+  const {token, token_type_hint}= req.body;
+
+  if(!token){
+    throw new ApiError(400, "Token is required");
+  }
+
+  try{
+    const decoded=jwt.verify(token, process.env.ACCESS_TOKEN_SECRET);
+    const user= await User.findById(decoded.id).select("-password -refreshToken")
+
+    if(!user){
+      return res.status(200).json({active:false})
+    }
+    return res.status(200).json({
+      active: true,
+            sub: user._id,
+            username: user.email,
+            tenant: user.tenant,
+            role: user.role,
+            exp: decoded.exp,
+            iat: decoded.iat,
+            scope: decoded.scope || "user",
+    });
+  } catch(err){
+    return res.status(200).json({active:false})
+  }
+})
+
 export default {
     handleAuthorize,
     handleToken,
-    handleUserInfo
+    handleUserInfo,
+    handleIntrospect
 }
